@@ -1,5 +1,5 @@
 [root]
-name = "plusplus"
+name = "karma"
 version = "0.0.1"
 dependencies = [
  "http 0.1.0-pre (git+https://github.com/chris-morgan/rust-http.git)",

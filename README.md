@@ -1,5 +1,5 @@
-plusplus-rs
-===========
+karma-rs
+========
 
 A [plusplus][jorgesimplementation] bot written in Rust.
 
