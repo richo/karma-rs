@@ -6,6 +6,7 @@ extern crate url;
 extern crate serialize;
 
 use std::os;
+use std::str;
 use std::sync::{Arc, Mutex};
 use std::io::net::ip::{SocketAddr, Ipv4Addr};
 use std::collections::HashMap;
@@ -53,10 +54,18 @@ fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: |&&str, &i32|) {
         _ => return,
     };
 
-    let current = points.insert(payload.user_name.to_string(), 0).unwrap_or(0);
-    points.insert(payload.user_name.to_string(), op(current));
+    let mut matches = payload.text.splitn(1, ' ');
+    let target = match (matches.next(), matches.next()) {
+        (None, None) => return, // No message or user
+        (Some(user), None) => user, // user, no message
+        (Some(user), Some(_)) => user, // TODO deal with the message
+        (None, Some(_)) => unreachable!(),
+    };
 
-    cb(&payload.user_name, &op(current));
+    let current = points.insert(target.to_string(), 0).unwrap_or(0);
+    points.insert(target.to_string(), op(current));
+
+    cb(&target, &op(current));
 }
 
 impl Server for KarmaServer {

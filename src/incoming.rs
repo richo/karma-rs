@@ -10,7 +10,7 @@ pub struct SlackPayload<'a> {
     user_id: &'a str,
     pub user_name: &'a str,
     pub command: &'a str,
-    text: &'a str,
+    pub text: &'a str,
 }
 
 macro_rules! get(
