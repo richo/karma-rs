@@ -65,7 +65,7 @@ impl Server for KarmaServer {
             None => panic!("Must specify PORT"),
             Some(port) => {
                 let port = from_str::<u16>(port.as_slice()).expect("PORT must be an int");
-                Config { bind_address: SocketAddr { ip: Ipv4Addr(127, 0, 0, 1), port: port } }
+                Config { bind_address: SocketAddr { ip: Ipv4Addr(0, 0, 0, 0), port: port } }
             }
         }
     }
