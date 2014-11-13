@@ -14,6 +14,8 @@ use http::method::{Get, Post};
 use http::server::{Config, Server, Request, ResponseWriter};
 use http::server::request::{AbsolutePath};
 
+use serialize::json;
+
 use incoming::{SlackPayload};
 use outgoing::{SlackEndpoint, OutgoingWebhook};
 
@@ -78,6 +80,11 @@ impl Server for KarmaServer {
             (&Get, "/") => {
                 w.write(b"Hello world!");
             },
+            (&Get, "/karma") => {
+                let scores = (*self.scores).lock();
+                let json = json::encode(&*scores);
+                w.write(json.as_bytes());
+            }
             (&Post, "/slack") => {
                 let mut scores = (*self.scores).lock();
                 let slack = self.get_slack_endpoint();
