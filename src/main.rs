@@ -85,6 +85,13 @@ impl Server for KarmaServer {
                 let json = json::encode(&*scores);
                 w.write(json.as_bytes());
             }
+            (&Post, "/normalise") => {
+                let mut scores = (*self.scores).lock();
+                for (_, v) in scores.iter_mut() {
+                    let new = *v as f64;
+                    *v = new.sqrt() as i32;
+                }
+            }
             (&Post, "/slack") => {
                 let mut scores = (*self.scores).lock();
                 let slack = self.get_slack_endpoint();
