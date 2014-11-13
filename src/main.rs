@@ -2,6 +2,8 @@
 #![feature(overloaded_calls)]
 
 extern crate http;
+extern crate url;
+extern crate serialize;
 
 use std::os;
 use std::str;
@@ -13,17 +15,23 @@ use http::method::{Get, Post};
 use http::server::{Config, Server, Request, ResponseWriter};
 use http::server::request::{AbsolutePath};
 
+use outgoing::{SlackEndpoint, OutgoingWebhook};
+
+mod outgoing;
+
 type Scores = HashMap<String, i32>;
 
 #[deriving(Send,Clone)]
 struct KarmaServer {
     scores: Arc<Mutex<Scores>>,
+    endpoint: String,
 }
 
 impl KarmaServer {
-    fn new(scores: Scores) -> KarmaServer {
+    fn new(scores: Scores, endpoint: String) -> KarmaServer {
         KarmaServer {
             scores: Arc::new(Mutex::new(scores)),
+            endpoint: endpoint
         }
     }
 }
@@ -76,7 +84,7 @@ impl<'a> SlackPayload<'a> {
     }
 }
 
-fn handle_karma(req: Vec<u8>, points: &mut Scores) {
+fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: |&&str, &i32|) {
     let payload = match SlackPayload::from_body(req.as_slice()) {
         Ok(payload) => payload,
         Err(err) => {
@@ -93,7 +101,7 @@ fn handle_karma(req: Vec<u8>, points: &mut Scores) {
     let current = points.insert(payload.user_name.to_string(), 0).unwrap_or(0);
     points.insert(payload.user_name.to_string(), op(current));
 
-    println!("{} now has {}", payload.user_name, op(current));
+    cb(&payload.user_name, &op(current));
 }
 
 impl Server for KarmaServer {
@@ -118,7 +126,18 @@ impl Server for KarmaServer {
             },
             (&Post, "/slack") => {
                 let mut scores = (*self.scores).lock();
-                handle_karma(r.body, &mut *scores);
+                let slack = self.get_slack_endpoint();
+                handle_karma(r.body, &mut *scores, |u, s| {
+                    let msg = format!("{} now at {}", u, s);
+                    let payload = OutgoingWebhook {
+                        text: msg.as_slice(),
+                        channel: "#hax",
+                        username: "karmabot",
+                        icon_emoji: Some(":ghost:"),
+                    };
+
+                    slack.send(&payload);
+                });
             },
             (_, _) => {
                 w.write(b"Not found :(");
@@ -127,7 +146,19 @@ impl Server for KarmaServer {
     }
 }
 
+impl KarmaServer {
+    fn get_slack_endpoint(&self) -> SlackEndpoint {
+        return SlackEndpoint {
+            url: self.endpoint.clone()
+        }
+    }
+}
+
 fn main() {
-    let server = KarmaServer::new(HashMap::new());
+    let endpoint = match os::getenv("WEBHOOK_ENDPOINT") {
+        Some(e) => e,
+        None => panic!("Must set WEBHOOK_ENDPOINT"),
+    };
+    let server = KarmaServer::new(HashMap::new(), endpoint);
     server.serve_forever();
 }
