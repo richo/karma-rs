@@ -1,9 +1,6 @@
 use http::client::RequestWriter;
 use http::method::Post;
-use http::headers::HeaderEnum;
-use std::os;
 use std::str;
-use std::io::println;
 use url::Url;
 use url::form_urlencoded;
 
@@ -28,6 +25,7 @@ impl SlackEndpoint {
         &self.url // Lurk because there seem to be several formats
     }
 
+    #[allow(unused_must_use)]
     pub fn send(&self, payload: &OutgoingWebhook) {
         let url = Url::parse(self.endpoint_url().as_slice()).ok().expect("Invalid URL :-(");
         let mut request: RequestWriter = RequestWriter::new(Post, url).unwrap();
@@ -42,7 +40,7 @@ impl SlackEndpoint {
         request.write(body.as_bytes());
 
         match request.read_response() {
-            Err(e) => println!("womp womp"),
+            Err(_) => println!("Error => couldn't read response"),
             Ok(mut resp) => {
                 let mut buf: &mut [u8] = &mut [0, ..1024];
                 resp.read(buf);

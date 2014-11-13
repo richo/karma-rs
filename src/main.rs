@@ -115,6 +115,7 @@ impl Server for KarmaServer {
         }
     }
 
+    #[allow(unused_must_use)]
     fn handle_request(&self, r: Request, w: &mut ResponseWriter) {
         let path = match r.request_uri { AbsolutePath(ref path) => path[], _ => return };
 
