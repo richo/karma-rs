@@ -50,7 +50,9 @@ fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: |&&str, &i32|) {
 
     let op = match payload.command {
         "%2F%2B%2B" => |c: i32| c + 1,
+        "%2F++" => |c: i32| c + 1,
         "%2F%2D%2D" => |c: i32| c - 1,
+        "%2F--" => |c: i32| c - 1,
         _ => return,
     };
 
