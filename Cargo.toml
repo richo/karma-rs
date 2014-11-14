@@ -5,5 +5,7 @@ version = "0.0.1"
 authors = ["Richo Healey <richo@psych0tik.net>"]
 
 [dependencies.http]
-
 git = "https://github.com/chris-morgan/rust-http.git"
+
+[dependencies.redis-rs]
+git = "https://github.com/mitsuhiko/redis-rs.git"

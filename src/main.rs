@@ -1,6 +1,7 @@
 #![feature(slicing_syntax, macro_rules)]
 #![feature(overloaded_calls)]
 
+extern crate redis;
 extern crate http;
 extern crate url;
 extern crate serialize;
@@ -21,6 +22,7 @@ use outgoing::{SlackEndpoint, OutgoingWebhook};
 
 mod incoming;
 mod outgoing;
+mod persistence;
 
 type Scores = HashMap<String, i32>;
 

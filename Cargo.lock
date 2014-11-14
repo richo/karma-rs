@@ -3,6 +3,7 @@ name = "karma"
 version = "0.0.1"
 dependencies = [
  "http 0.1.0-pre (git+https://github.com/chris-morgan/rust-http.git)",
+ "redis-rs 0.3.0 (git+https://github.com/mitsuhiko/redis-rs.git)",
 ]
 
 [[package]]
@@ -55,6 +56,20 @@ dependencies = [
 name = "openssl"
 version = "0.0.0"
 source = "git+https://github.com/sfackler/rust-openssl.git#952fef797171b77ae28374ef1c98152be6d5cf26"
+
+[[package]]
+name = "redis-rs"
+version = "0.3.0"
+source = "git+https://github.com/mitsuhiko/redis-rs.git#38ff113933d798a0257745169f07761a65cbfde5"
+dependencies = [
+ "rust-crypto 0.1.0 (git+https://github.com/DaGenix/rust-crypto.git)",
+ "url 0.1.0 (git+https://github.com/servo/rust-url)",
+]
+
+[[package]]
+name = "rust-crypto"
+version = "0.1.0"
+source = "git+https://github.com/DaGenix/rust-crypto.git#942e60ec3281ee83b6dc1fdcf7a71d21436bcda9"
 
 [[package]]
 name = "url"
