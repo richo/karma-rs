@@ -6,7 +6,6 @@ extern crate url;
 extern crate serialize;
 
 use std::os;
-use std::str;
 use std::sync::{Arc, Mutex};
 use std::io::net::ip::{SocketAddr, Ipv4Addr};
 use std::collections::HashMap;
