@@ -108,9 +108,10 @@ impl Server for KarmaServer {
                 let slack = self.get_slack_endpoint();
                 handle_karma(r.body, &mut *scores, |u, s, c| {
                     let msg = format!("{} now at {}", u, s);
+                    let channel = format!("#{}", c);
                     let payload = OutgoingWebhook {
                         text: msg.as_slice(),
-                        channel: *c,
+                        channel: channel.as_slice(),
                         username: "karmabot",
                         icon_emoji: Some(":ghost:"),
                     };
