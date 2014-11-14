@@ -40,7 +40,7 @@ impl KarmaServer {
     }
 }
 
-fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: |&&str, &i32|) {
+fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: |&&str, &i32, &&str|) {
     let payload = match SlackPayload::from_body(req.as_slice()) {
         Ok(payload) => payload,
         Err(err) => {
@@ -67,7 +67,7 @@ fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: |&&str, &i32|) {
     let current = points.insert(target.to_string(), 0).unwrap_or(0);
     points.insert(target.to_string(), op(current));
 
-    cb(&target, &op(current));
+    cb(&target, &op(current), &payload.channel_name);
 }
 
 impl Server for KarmaServer {
@@ -106,11 +106,11 @@ impl Server for KarmaServer {
             (&Post, "/slack") => {
                 let mut scores = (*self.scores).lock();
                 let slack = self.get_slack_endpoint();
-                handle_karma(r.body, &mut *scores, |u, s| {
+                handle_karma(r.body, &mut *scores, |u, s, c| {
                     let msg = format!("{} now at {}", u, s);
                     let payload = OutgoingWebhook {
                         text: msg.as_slice(),
-                        channel: "#hax",
+                        channel: *c,
                         username: "karmabot",
                         icon_emoji: Some(":ghost:"),
                     };

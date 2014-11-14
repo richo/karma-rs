@@ -6,7 +6,7 @@ pub struct SlackPayload<'a> {
     token: &'a str,
     team_id: &'a str,
     channel_id: &'a str,
-    channel_name: &'a str,
+    pub channel_name: &'a str,
     user_id: &'a str,
     pub user_name: &'a str,
     pub command: &'a str,
