@@ -13,14 +13,14 @@ pub struct SlackPayload<'a> {
     pub text: &'a str,
 }
 
-macro_rules! get(
+macro_rules! get{
     ($hash: expr, $opt:expr, $msg:expr) => {
         match $hash.get(&$opt) {
             Some(n) => *n,
             None => return Err($msg.to_string()),
         }
     }
-)
+}
 
 impl<'a> SlackPayload<'a> {
     pub fn from_body<'a>(req: &[u8]) -> Result<SlackPayload, String> {

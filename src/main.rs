@@ -1,4 +1,4 @@
-#![feature(slicing_syntax, macro_rules)]
+#![feature(slicing_syntax)]
 #![feature(overloaded_calls)]
 
 extern crate http;
@@ -12,7 +12,6 @@ use std::collections::HashMap;
 
 use http::method::{Get, Post};
 use http::server::{Config, Server, Request, ResponseWriter};
-use http::server::request::{AbsolutePath};
 
 use serialize::json;
 
@@ -39,7 +38,7 @@ impl KarmaServer {
     }
 }
 
-fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: |&&str, &i32, &&str|) {
+fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: Fn(&&str, &i32, &&str)) {
     let payload = match SlackPayload::from_body(req.as_slice()) {
         Ok(payload) => payload,
         Err(err) => {
@@ -74,7 +73,7 @@ impl Server for KarmaServer {
         match os::getenv("PORT") {
             None => panic!("Must specify PORT"),
             Some(port) => {
-                let port = from_str::<u16>(port.as_slice()).expect("PORT must be an int");
+                let port: u16 = (port.as_slice()).expect("PORT must be an int").parse();
                 Config { bind_address: SocketAddr { ip: Ipv4Addr(0, 0, 0, 0), port: port } }
             }
         }
