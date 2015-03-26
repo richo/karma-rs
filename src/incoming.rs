@@ -1,7 +1,7 @@
 use std::str;
 use std::collections::HashMap;
 
-#[deriving(Show)]
+#[derive(Debug)]
 pub struct SlackPayload<'a> {
     token: &'a str,
     team_id: &'a str,

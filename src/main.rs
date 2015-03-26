@@ -23,7 +23,7 @@ mod outgoing;
 
 type Scores = HashMap<String, i32>;
 
-#[deriving(Send,Clone)]
+#[derive(Clone)]
 struct KarmaServer {
     scores: Arc<Mutex<Scores>>,
     endpoint: String,
@@ -81,7 +81,7 @@ impl Server for KarmaServer {
 
     #[allow(unused_must_use)]
     fn handle_request(&self, r: Request, w: &mut ResponseWriter) {
-        let path = match r.request_uri { AbsolutePath(ref path) => path[], _ => return };
+        let path = match r.request_uri { AbsolutePath(ref path) => path, _ => return };
 
         println!("{}: {}", r.method, path);
 

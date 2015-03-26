@@ -8,7 +8,7 @@ use serialize::json;
 use serialize::Encodable;
 
 
-#[deriving(Encodable)]
+#[derive(RustcEncodable)]
 pub struct OutgoingWebhook<'a> {
     pub text: &'a str,
     pub channel: &'a str,
