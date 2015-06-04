@@ -1,14 +1,18 @@
-use http::client::RequestWriter;
-use http::method::Post;
+use hyper;
+
+use url::{Url,form_urlencoded};
+
 use std::str;
-use url::Url;
-use url::form_urlencoded;
+
+use std::io::Read;
 
 use serialize::json;
-use serialize::Encodable;
+use serialize::serialize::Encodable;
+
+use hyper::header;
 
 
-#[derive(RustcEncodable)]
+#[derive(Encodable)]
 pub struct OutgoingWebhook<'a> {
     pub text: &'a str,
     pub channel: &'a str,
@@ -27,22 +31,23 @@ impl SlackEndpoint {
 
     #[allow(unused_must_use)]
     pub fn send(&self, payload: &OutgoingWebhook) {
-        let url = Url::parse(self.endpoint_url().as_slice()).ok().expect("Invalid URL :-(");
-        let mut request: RequestWriter = RequestWriter::new(Post, url).unwrap();
-        let json = json::encode(payload);
+        let mut client = hyper::Client::new();
+        let url = Url::parse(&self.endpoint_url()[..]).ok().expect("Invalid URL :-(");
+
+        let mut request = client.post(url);
+
+        let json = json::encode(payload).ok().unwrap();
         let payload = [ ("payload".to_string(), json) ];
-        let body = form_urlencoded::serialize_owned(payload);
-
+        let body = form_urlencoded::serialize(&payload);
         let length = body.as_bytes().len();
-        request.headers.insert_raw("Content-Type".to_string(), b"application/x-www-form-urlencoded");
-        request.headers.insert_raw("Content-Length".to_string(), length.to_string().as_bytes());
 
-        request.write(body.as_bytes());
+        request.body(body.as_bytes());
+        request.header(header::ContentType::form_url_encoded());
 
-        match request.read_response() {
+        match request.send() {
             Err(_) => println!("Error => couldn't read response"),
             Ok(mut resp) => {
-                let mut buf: &mut [u8] = &mut [0, ..1024];
+                let mut buf: &mut [u8] = &mut [0; 1024];
                 resp.read(buf);
                 let buf = str::from_utf8(buf).unwrap();
                 println!("Got status: {} => {}", resp.status, buf);

@@ -23,7 +23,7 @@ macro_rules! get{
 }
 
 impl<'a> SlackPayload<'a> {
-    pub fn from_body<'a>(req: &[u8]) -> Result<SlackPayload, String> {
+    pub fn from_body(req: &[u8]) -> Result<SlackPayload, String> {
         let pieces = req.split(|c| *c == '&' as u8);
         let pieces: Vec<&str> = pieces.map(|c| str::from_utf8(c).unwrap()).collect();
         let mut vars = HashMap::new();

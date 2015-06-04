@@ -1,19 +1,24 @@
 #![feature(slicing_syntax)]
 #![feature(overloaded_calls)]
 
-extern crate http;
+extern crate hyper;
 extern crate url;
+extern crate rustc_serialize;
 extern crate serialize;
 
 use std::os;
+use std::env;
+use std::io::Write;
 use std::sync::{Arc, Mutex};
-use std::io::net::ip::{SocketAddr, Ipv4Addr};
+use std::net::{SocketAddr, Ipv4Addr};
 use std::collections::HashMap;
 
-use http::method::{Get, Post};
-use http::server::{Config, Server, Request, ResponseWriter};
-
 use serialize::json;
+
+use hyper::{Get, Post};
+use hyper::header::ContentLength;
+use hyper::server::{Server, Request, Response};
+use hyper::uri::RequestUri::AbsolutePath;
 
 use incoming::{SlackPayload};
 use outgoing::{SlackEndpoint, OutgoingWebhook};
@@ -38,7 +43,8 @@ impl KarmaServer {
     }
 }
 
-fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: Fn(&&str, &i32, &&str)) {
+fn handle_karma<F>(req: Vec<u8>, points: &mut Scores, cb: F)
+    where F: Fn(&&str, &i32, &&str) {
     let payload = match SlackPayload::from_body(req.as_slice()) {
         Ok(payload) => payload,
         Err(err) => {
@@ -46,11 +52,11 @@ fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: Fn(&&str, &i32, &&str)) {
         }
     };
 
-    let op = match payload.command {
-        "%2F%2B%2B" => |c: i32| c + 1,
-        "%2F++" => |c: i32| c + 1,
-        "%2F%2D%2D" => |c: i32| c - 1,
-        "%2F--" => |c: i32| c - 1,
+    let op: Box<Fn(i32) -> i32> = match payload.command {
+        "%2F%2B%2B" => Box::new(|c: i32| c + 1),
+        "%2F++" => Box::new(|c: i32| c + 1),
+        "%2F%2D%2D" => Box::new(|c: i32| c - 1),
+        "%2F--" => Box::new(|c: i32| c - 1),
         _ => return,
     };
 
@@ -68,57 +74,47 @@ fn handle_karma(req: Vec<u8>, points: &mut Scores, cb: Fn(&&str, &i32, &&str)) {
     cb(&target, &op(current), &payload.channel_name);
 }
 
-impl Server for KarmaServer {
-    fn get_config(&self) -> Config {
-        match os::getenv("PORT") {
-            None => panic!("Must specify PORT"),
-            Some(port) => {
-                let port: u16 = (port.as_slice()).expect("PORT must be an int").parse();
-                Config { bind_address: SocketAddr { ip: Ipv4Addr(0, 0, 0, 0), port: port } }
-            }
-        }
-    }
-
-    #[allow(unused_must_use)]
-    fn handle_request(&self, r: Request, w: &mut ResponseWriter) {
-        let path = match r.request_uri { AbsolutePath(ref path) => path, _ => return };
-
-        println!("{}: {}", r.method, path);
-
-        match (&r.method, path) {
+fn echo(mut req: Request, mut res: Response) {
+    match req.uri {
+        AbsolutePath(ref path) => match (&req.method, &path[..]) {
             (&Get, "/") => {
-                w.write(b"Hello world!");
+                let res = res.start().unwrap();
+                res.write(b"Hello world!");
+                res.end();
             },
-            (&Get, "/karma") => {
-                let scores = (*self.scores).lock();
-                let json = json::encode(&*scores);
-                w.write(json.as_bytes());
-            }
-            (&Post, "/normalise") => {
-                let mut scores = (*self.scores).lock();
-                for (_, v) in scores.iter_mut() {
-                    let new = *v as f64;
-                    *v = new.sqrt() as i32;
-                }
-            }
-            (&Post, "/slack") => {
-                let mut scores = (*self.scores).lock();
-                let slack = self.get_slack_endpoint();
-                handle_karma(r.body, &mut *scores, |u, s, c| {
-                    let msg = format!("{} now at {}", u, s);
-                    let channel = format!("#{}", c);
-                    let payload = OutgoingWebhook {
-                        text: msg.as_slice(),
-                        channel: channel.as_slice(),
-                        username: "karmabot",
-                        icon_emoji: Some(":ghost:"),
-                    };
+            // (&Get, "/karma") => {
+            //     let scores = (*self.scores).lock();
+            //     let json = json::encode(&*scores);
+            //     w.write(json.as_bytes());
+            // }
+            // (&Post, "/normalise") => {
+            //     let mut scores = (*self.scores).lock();
+            //     for (_, v) in scores.iter_mut() {
+            //         let new = *v as f64;
+            //         *v = new.sqrt() as i32;
+            //     }
+            // }
+            // (&Post, "/slack") => {
+            //     let mut scores = (*self.scores).lock();
+            //     let slack = self.get_slack_endpoint();
+            //     handle_karma(r.body, &mut *scores, |u, s, c| {
+            //         let msg = format!("{} now at {}", u, s);
+            //         let channel = format!("#{}", c);
+            //         let payload = OutgoingWebhook {
+            //             text: msg.as_slice(),
+            //             channel: channel.as_slice(),
+            //             username: "karmabot",
+            //             icon_emoji: Some(":ghost:"),
+            //         };
 
-                    slack.send(&payload);
-                });
-            },
+            //         slack.send(&payload);
+            //     });
+            // },
             (_, _) => {
-                w.write(b"Not found :(");
+                *res.status_mut() = hyper::NotFound;
+                let res = res.start().unwrap();
+                res.write(b"Not found :(");
+                res.end();
             }
         }
     }
@@ -126,17 +122,17 @@ impl Server for KarmaServer {
 
 impl KarmaServer {
     fn get_slack_endpoint(&self) -> SlackEndpoint {
-        return SlackEndpoint {
+        SlackEndpoint {
             url: self.endpoint.clone()
         }
     }
 }
 
 fn main() {
-    let endpoint = match os::getenv("WEBHOOK_ENDPOINT") {
+    let endpoint = match env::var_os("WEBHOOK_ENDPOINT") {
         Some(e) => e,
         None => panic!("Must set WEBHOOK_ENDPOINT"),
     };
-    let server = KarmaServer::new(HashMap::new(), endpoint);
+    let server = KarmaServer::new(HashMap::new(), endpoint.into_string().unwrap());
     server.serve_forever();
 }
