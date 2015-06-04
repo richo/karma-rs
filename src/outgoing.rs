@@ -1,18 +1,13 @@
 use hyper;
-
 use url::{Url,form_urlencoded};
-
 use std::str;
-
-use std::io::Read;
-
-use serialize::json;
-use serialize::serialize::Encodable;
-
-use hyper::header;
+use std::io::{Read,Write};
+use rustc_serialize::json;
+use hyper::{header,client,method};
+use rustc_serialize::Encodable;
 
 
-#[derive(Encodable)]
+#[derive(RustcEncodable)]
 pub struct OutgoingWebhook<'a> {
     pub text: &'a str,
     pub channel: &'a str,
@@ -30,19 +25,23 @@ impl SlackEndpoint {
     }
 
     #[allow(unused_must_use)]
-    pub fn send(&self, payload: &OutgoingWebhook) {
-        let mut client = hyper::Client::new();
+    pub fn send<'a>(&self, payload: &OutgoingWebhook) {
         let url = Url::parse(&self.endpoint_url()[..]).ok().expect("Invalid URL :-(");
 
-        let mut request = client.post(url);
+        let mut request = client::Request::new(method::Method::Post, url).unwrap();
 
-        let json = json::encode(payload).ok().unwrap();
-        let payload = [ ("payload".to_string(), json) ];
-        let body = form_urlencoded::serialize(&payload);
-        let length = body.as_bytes().len();
+        let json: String = json::encode(&payload).ok().unwrap();
+        let form_payload = [ ("payload".to_string(), json) ];
+        let body: String = form_urlencoded::serialize(&form_payload);
 
-        request.body(body.as_bytes());
-        request.header(header::ContentType::form_url_encoded());
+        {
+            let mut headers = request.headers_mut();
+            headers.set(header::ContentType::form_url_encoded());
+        }
+
+        let mut request = request.start().unwrap();
+
+        request.write_all(body.as_bytes());
 
         match request.send() {
             Err(_) => println!("Error => couldn't read response"),
@@ -53,6 +52,5 @@ impl SlackEndpoint {
                 println!("Got status: {} => {}", resp.status, buf);
             }
         }
-
     }
 }

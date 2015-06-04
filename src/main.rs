@@ -4,7 +4,6 @@
 extern crate hyper;
 extern crate url;
 extern crate rustc_serialize;
-extern crate serialize;
 
 use std::os;
 use std::env;
@@ -13,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::net::{SocketAddr, Ipv4Addr};
 use std::collections::HashMap;
 
-use serialize::json;
+use rustc_serialize::json;
 
 use hyper::{Get, Post};
 use hyper::header::ContentLength;
@@ -45,7 +44,7 @@ impl KarmaServer {
 
 fn handle_karma<F>(req: Vec<u8>, points: &mut Scores, cb: F)
     where F: Fn(&&str, &i32, &&str) {
-    let payload = match SlackPayload::from_body(req.as_slice()) {
+    let payload = match SlackPayload::from_body(&req[..]) {
         Ok(payload) => payload,
         Err(err) => {
             println!("Error! {}", err); return
@@ -78,7 +77,7 @@ fn echo(mut req: Request, mut res: Response) {
     match req.uri {
         AbsolutePath(ref path) => match (&req.method, &path[..]) {
             (&Get, "/") => {
-                let res = res.start().unwrap();
+                let mut res = res.start().unwrap();
                 res.write(b"Hello world!");
                 res.end();
             },
@@ -112,11 +111,12 @@ fn echo(mut req: Request, mut res: Response) {
             // },
             (_, _) => {
                 *res.status_mut() = hyper::NotFound;
-                let res = res.start().unwrap();
+                let mut res = res.start().unwrap();
                 res.write(b"Not found :(");
                 res.end();
             }
-        }
+        },
+        _ => panic!("nfi what to do"),
     }
 }
 
@@ -125,6 +125,10 @@ impl KarmaServer {
         SlackEndpoint {
             url: self.endpoint.clone()
         }
+    }
+
+    fn serve_forever(&self) {
+        Server::http(echo).listen("0.0.0.0:8080").unwrap();
     }
 }
 
